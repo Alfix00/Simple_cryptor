@@ -19,7 +19,7 @@ class Build():
     generated_key = None
     cypted_object = None
     decrypted_object = None
-    formatted_decrypted = None
+    crypted_name = None
 
     def __init__(self, obj2crypt, filename):
         self.object_to_crypt = obj2crypt
@@ -36,7 +36,7 @@ class Build():
         salted.write(str(self.salted_key))
         salted.close()
         generated = open("./Saved_Keys/"+self.name_of_file+"_KEYS/GENERATED.KEY", "w")
-        generated.write(str(self.generated_key))
+        generated.write(str(self.generated_key)+"\n"+str(self.crypted_name))
         generated.close()
 
     def initialize_key(self):
@@ -82,9 +82,12 @@ class Build():
 
     def encrypt_string(self):
         object_ = self.object_to_crypt
+        name_object_ = self.name_of_file
         f = Fernet(self.generated_key)
         encrypted = f.encrypt(object_)
+        encrypted_name = f.encrypt(name_object_.encode())
         self.cypted_object = encrypted
+        self.crypted_name = encrypted_name
 
     def decrypt_string(self):
         f = Fernet(self.generated_key)
@@ -102,7 +105,7 @@ class Build():
             file.write(self.decrypted_object)
 
     def get_keys(self):
-        key_list = [str(self.fernet_key), str(self.salted_key), str(self.generated_key)]
+        key_list = [str(self.fernet_key), str(self.salted_key), str(self.generated_key), str(self.crypted_name), str(self.name_of_file)]
         return key_list
 
 #<-- End of Build Class
@@ -142,6 +145,7 @@ def option_two(file_target):
         file_target.setting_up()
         print("Encryption...")
         file_target.encrypt_string()
+
         file_target.encrypt_file()
         print("Saving settings...")
         file_target.save_settings()
@@ -171,21 +175,25 @@ def option_three(file_target):
             key = option_one("./Unlock_Keys",True)
             try: 
                 access_p = str(key)
-                access_p = re.search(r'\'(.*?)\'',access_p).group(1)
-                key = access_p.encode()
-                f = Fernet(key)
+                access_p = re.search(r'\'(.*?)\'',access_p).group(1)                #Formatting key
+                scrap = str(key).replace(access_p,"")                               #Cutted the key from the string
+                s_decrypt_name = scrap.replace('b"',"").replace("b''","").replace("'","").replace("/n","").replace('"',"").replace("\\nb", "") #Yes, is really ugly
+                key = access_p.encode()                                                                                                        #but i'm bored
+                f = Fernet(key)                                                     #Generating Fernet_key from file
                 path = "./Decrypted_folder/Unlocked_Files"
-                decrypted = f.decrypt(target_file)
-                with open(path+"/Decrypted", "wb") as file:
+                decrypted = f.decrypt(target_file)                                  #Decrypt object
+                decrypted_name = f.decrypt(s_decrypt_name.encode())                 #Decrypt name
+                parse_string = str(decrypted_name)
+                name_file = parse_string.replace("b'", "").replace("'","")
+                with open(path+"/"+name_file, "wb") as file:                        #Save file with the correct (and decrypted) name.
                     file.write(decrypted)
                 print("\n -> Decrypted Succesfully!  Check in folder [./Decrypted_folder/Unlocked_Files] ")
                 answer = True
             except:
-                clear()
+                #clear()
                 print("Failed to decrypt file! - Wrong Key")
         elif question != 0:
             print("\n -> Invalid key! please use numbers [1,2,...] <- \n")
-
 
 def option_four(file_target):
     if isinstance(file_target, Build):
@@ -193,6 +201,8 @@ def option_four(file_target):
         print("Fernet Key: "+key_list[0])
         print("Salted Key: "+key_list[1])
         print("Generated Key : "+key_list[2])
+        print("Crypted Name :"+key_list[3])
+        print("File ----> "+key_list[4])
 
 # <-- End Options 
 # --> Usefull Methods 
